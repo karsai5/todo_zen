@@ -1,0 +1,117 @@
+#!/usr/bin/env python
+
+import sys
+import subprocess
+
+from optparse import OptionParser
+
+todoFileLocation = '/home/linus/Dropbox/todo.txt'
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def appendToTodo(todoIndex, text, printFlag = False):
+    filelines = []
+    with open(todoFileLocation, 'r') as todoFile:
+        for i, x in enumerate(todoFile):
+            if i == (todoIndex-1):
+                filelines.append(x.strip() + ' ' + text + '\n')
+                if printFlag: print x.strip()
+            else:
+                filelines.append(x)
+
+    with open(todoFileLocation, 'w') as todoFile:
+        todoFile.writelines(filelines)
+
+def addNewTodo(text, printFlag = False):
+    with open(todoFileLocation, 'a') as todoFile:
+        todoFile.write(text + '\n')
+    if printFlag: print text
+
+def pickTodo(todoIdentifier, zenlevel):
+    """ Pick a todo item, either by index or create a new todo item """ 
+    if todoIdentifier.isdigit():
+        todoIdentifier = int(todoIdentifier)
+        appendToTodo(todoIdentifier, '+z +z' + zenlevel, True)
+    else:
+        if todoIdentifier != '':
+            todoText = todoIdentifier + ' +z +z' + zenlevel
+            addNewTodo(todoText, True)
+
+def removeZentags():
+    """ Remove all the zentags from the todo lists """
+    filelines = []
+    with open(todoFileLocation, 'r') as todoFile:
+        for line in todoFile:
+            filelines.append(line
+                    .replace('+zb', '')
+                    .replace('+zm', '')
+                    .replace('+zs', '')
+                    .replace('+z', ''))
+
+    with open(todoFileLocation, 'w') as todoFile:
+        todoFile.writelines(filelines)
+
+def createZenlist():
+    #Remove exsisting zentags
+    removeZentags()
+    
+    #Print items
+    with open('/home/linus/Dropbox/todo.txt', 'r') as todoFile:
+        counter = 1
+        for line in todoFile:
+            print bcolors.HEADER + str(counter) + bcolors.ENDC + ' ' + line.rstrip()
+            counter += 1
+
+    #Big todo
+    todoIndex = raw_input('\nPick one big todo or write a new one: ')
+    pickTodo(todoIndex, 'b')
+
+    #Medium todo
+    print('\nPick three medium todos or write new ones:') 
+    for x in range(0, 3):
+        todoIndex = raw_input('%d: ' % int(x + 1))
+        pickTodo(todoIndex, 'm')
+
+    #Small todos
+    print('\nPick five small todos or write new ones:') 
+    for x in range(0, 5):
+        todoIndex = raw_input('%d: ' % int(x + 1))
+        pickTodo(todoIndex, 's')
+
+def getLinesFromTodo(searchText):
+    numberOfLines = -1
+    lines = subprocess.check_output(
+            'todo.sh -d /home/linus/Dropbox/Configs/todo.cfg ls ' + searchText,
+            shell=True).rstrip()
+    lines = lines.split('\n')
+    for i, line in enumerate(lines):
+        if line == '--':
+            numberOfLines = i
+    return '\n'.join(lines[:numberOfLines])
+
+def printZenlist():
+    print "Your ZenList:"
+    print "============="
+    print "Main task for today: \n%s" % getLinesFromTodo('+zb')
+    print "\nMedium tasks for today: \n%s" % getLinesFromTodo('+zm')
+    print "\nSmall tasks for today: \n%s" % getLinesFromTodo('+zs')
+
+def main(argv):
+    if (len(argv) != 1):
+        print "Please pick a command: create or ls"
+    else:
+        if argv[0] == 'create':
+            createZenlist()
+        elif argv[0] == 'ls':
+            printZenlist()
+
+if __name__ == '__main__':
+    main(sys.argv[2:])
